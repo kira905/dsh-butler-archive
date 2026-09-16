@@ -104,14 +104,37 @@ await remoteRefs('Gitee', giteeUrl)
 if (!SKIP_GH) await remoteRefs('GitHub', ghUrl)
 
 // ── 2/3. 内容级检查（平台 API 直读 + 匿名可见） ───────────────────────────
+// 规则表**不写真实机器名 / 用户名 / 本机专属路径或目录名**（本文件随仓发布，写进去等于把要藏的东西写出来）。
+// 口径与 verify-source.mjs 第 4 段一致：通用形态永久生效 + 本机标识由环境变量注入。
+//   BUILD_MACHINE_NAMES / BUILD_USER_NAMES / BUILD_LAYOUT_ROOTS / BUILD_SYNC_PRODUCTS（逗号或分号分隔）
+// 未注入时通用形态仍能抓出任何 `…/Users/<名>` 用户目录、任何盘符绝对路径与凭证形态。
+const envList = (name) => (process.env[name] ?? '')
+  .split(/[,;]/)
+  .map((s) => s.trim())
+  .filter((s) => s.length >= 2)
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+const EXTRA_MACHINES = envList('BUILD_MACHINE_NAMES')
+const EXTRA_USERS = envList('BUILD_USER_NAMES')
+const EXTRA_ROOTS = envList('BUILD_LAYOUT_ROOTS')
+const EXTRA_SYNC = envList('BUILD_SYNC_PRODUCTS')
+
 const SENSITIVE = [
-  [/ZEPHYRUSAIR|KIRA-TUF/i, '机器名'],
-  [/[\\/]Users[\\/]51367|\b51367\b/, '用户名'],
-  [/D:\\DSH\b|D:\/DSH\b|BaiduSync|DSH-offsync|H:\\DSH-test/i, '本机路径'],
-  [/主人|本鱼|铲屎的|鲸鱼娘/, '个人称呼'],
+  [/[\\/]Users[\\/](?!<|\$\{|%)[A-Za-z0-9._-]{2,}/, '用户目录形态'],
+  // 盘符前须为「行首或非字母数字」，避免 `http://` 误判为盘符
+  [/(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/](?!<|\$\{|%)[^\s'"`<>|?*]{2,}/, '绝对路径形态'],
   [/坚果云|百度网盘|Nutstore/i, '本机同步产品'],
+  [/主人|本鱼|铲屎的|鲸鱼娘/, '个人称呼'],
   [/\bsk-[A-Za-z0-9]{8,}|\bgho_[A-Za-z0-9]{20,}|\bghp_[A-Za-z0-9]{20,}/, '凭证形态'],
 ]
+if (EXTRA_SYNC.length) SENSITIVE.unshift([new RegExp(EXTRA_SYNC.map(esc).join('|'), 'i'), '本机同步产品'])
+if (EXTRA_MACHINES.length) SENSITIVE.unshift([new RegExp(EXTRA_MACHINES.map(esc).join('|'), 'i'), '机器名'])
+if (EXTRA_USERS.length) SENSITIVE.unshift([new RegExp(EXTRA_USERS.map(esc).join('|'), 'i'), '用户名'])
+if (EXTRA_ROOTS.length) SENSITIVE.unshift([new RegExp(EXTRA_ROOTS.map(esc).join('|'), 'i'), '本机路径'])
+const INJECTED = EXTRA_MACHINES.length + EXTRA_USERS.length + EXTRA_ROOTS.length + EXTRA_SYNC.length
+console.log('[i] 敏感规则：通用 ' + (SENSITIVE.length - INJECTED) + ' 条 + 注入 ' + INJECTED
+  + '（机器名 ' + EXTRA_MACHINES.length + ' / 用户名 ' + EXTRA_USERS.length
+  + ' / 目录名 ' + EXTRA_ROOTS.length + ' / 同步产品 ' + EXTRA_SYNC.length + '）'
+  + (INJECTED ? '' : '  ← 未注入 BUILD_* 环境变量，仅通用形态规则生效'))
 const scan = (label, text) => {
   let hit = 0
   for (const [re, name] of SENSITIVE) {

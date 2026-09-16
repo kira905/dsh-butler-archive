@@ -98,17 +98,52 @@ check('invalid value fell back to default', loaded3.config.preview.maxMessages =
 check('negative hours clamped', loaded3.config.auto.hours >= 1)
 
 // 4) 敏感词扫描
-//    规则只放**真实发生过的**本机标识（机器名 / 用户名 / 本机目录名 / 个人称呼），
-//    不放宽泛词，免得扫描器把自己定义的规则也扫出来（那是自匹配，不是发现）。
+//    **本文件不写任何真实机器名 / 用户名 / 本机专属路径或目录名**（否则等于把要藏的东西写进要发布的仓）。
+//    口径：规则表 = 「通用形态规则（永久）」+「本机标识规则（环境变量注入）」。
+//      · 通用形态：任何 `…/Users/<名>` 式用户目录、任何盘符绝对路径、通用同步产品名、凭证形态。
+//      · 本机标识：机器名 / 用户名 / 本机专属目录名（工作区、同步根、测试根）—— 由发布环境注入；
+//        未注入时通用形态仍然生效（用户目录与绝对路径这类形态**无需注入即可检出**）。
+//        注入方式（逗号或分号分隔，大小写不敏感）：
+//          BUILD_MACHINE_NAMES   例：<本机主机名1>,<本机主机名2>
+//          BUILD_USER_NAMES      例：<本机用户名1>,<本机用户名2>
+//          BUILD_LAYOUT_ROOTS    例：<本机工作区目录名>,<本机同步根目录名>,<本机测试根目录名>
+//          BUILD_SYNC_PRODUCTS   例：<本机在用同步产品目录名>
+//        未注入时会在扫描段打印一行提示（提示不影响退出码）。
 //    扫描范围：lib/ 与文档/配置（scripts/ 里是测试与部署工具，自身含检测规则，跳过）。
+const envList = (name) => (process.env[name] ?? '')
+  .split(/[,;]/)
+  .map((s) => s.trim())
+  .filter((s) => s.length >= 2)
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const EXTRA_MACHINES = envList('BUILD_MACHINE_NAMES')
+const EXTRA_USERS = envList('BUILD_USER_NAMES')
+const EXTRA_ROOTS = envList('BUILD_LAYOUT_ROOTS')
+const EXTRA_SYNC = envList('BUILD_SYNC_PRODUCTS')
+
+// 通用形态规则：与具体机器无关，永远生效
 const PATTERNS = [
-  [/ZEPHYRUSAIR|KIRA-TUF|zephyrusair/i, 'machine name'],
-  [/[\\/]Users[\\/]51367|\b51367\b/, 'user name'],
-  [/D:\\DSH\b|D:\/DSH\b|BaiduSync|DSH-offsync|H:\\DSH-test|H:\/DSH-test/i, 'local layout path'],
-  [/主人|本鱼|铲屎的|鲸鱼娘|whale-girl/, 'personal wording'],
+  [/[\\/]Users[\\/](?!<|\$\{|%|<user>)[A-Za-z0-9._-]{2,}/, 'user profile dir'],
+  // 盘符前必须是「行首或非字母数字」——否则 `http://` 这类 URL scheme 会被当成盘符误报
+  [/(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/](?!<|\$\{|%|<path>)[^\s'"`<>|?*]{2,}/, 'absolute windows path'],
   [/坚果云|百度网盘|Nutstore/i, 'local sync product'],
   [/\bsk-[A-Za-z0-9]{8,}/, 'api key'],
 ]
+const GENERIC_COUNT = PATTERNS.length
+// 本机标识规则：环境变量注入（未注入 = 无此规则，通用形态规则兜底）
+if (EXTRA_SYNC.length) PATTERNS.unshift([new RegExp(EXTRA_SYNC.map(esc).join('|'), 'i'), 'local sync product'])
+if (EXTRA_MACHINES.length) PATTERNS.unshift([new RegExp(EXTRA_MACHINES.map(esc).join('|'), 'i'), 'machine name'])
+if (EXTRA_USERS.length) PATTERNS.unshift([new RegExp(EXTRA_USERS.map(esc).join('|'), 'i'), 'user name'])
+if (EXTRA_ROOTS.length) PATTERNS.unshift([new RegExp(EXTRA_ROOTS.map(esc).join('|'), 'i'), 'local layout path'])
+const injected = EXTRA_MACHINES.length + EXTRA_USERS.length + EXTRA_ROOTS.length + EXTRA_SYNC.length
+console.log(
+  '[i] sensitive rules: generic=' + GENERIC_COUNT + ' + injected=' + injected
+  + '(machine=' + EXTRA_MACHINES.length + ' user=' + EXTRA_USERS.length
+  + ' layout=' + EXTRA_ROOTS.length + ' sync=' + EXTRA_SYNC.length + ')'
+  + (injected
+    ? ''
+    : '  ← 未注入 BUILD_MACHINE_NAMES / BUILD_USER_NAMES / BUILD_LAYOUT_ROOTS / BUILD_SYNC_PRODUCTS，仅通用形态规则生效')
+)
 const TEXT_LIKE = new Set(['.md', '.json', '.yml', '.yaml', '.txt', '.example'])
 const isTextLike = (rel) => [...TEXT_LIKE].some((ext) => rel.endsWith(ext))
 const isComment = (line) => /^\s{0,4}(\/\/|\/\*|\*|#|<!--)/.test(line)
