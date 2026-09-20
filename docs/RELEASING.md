@@ -51,6 +51,9 @@
 按顺序跑，任一项不过就不发：
 
 - [ ] `node scripts/verify-source.mjs .` → `ALL CHECKS PASSED`
+      ⚠️ 要在**本机**覆盖实名规则（机器名 / 用户名 / 本地路径 / 同步产品名）时，先注入
+      `BUILD_MACHINE_NAMES` / `BUILD_USER_NAMES` / `BUILD_LAYOUT_ROOTS` / `BUILD_SYNC_PRODUCTS` 再跑；
+      不注入时只跑通用形态规则（脚本会打印 `injected=0` 提示，属**预期**而非失败）
 - [ ] `node scripts/test-e2e.mjs` → `E2E PASSED`
 - [ ] 在**真实 DSH 实例**上装一次（至少：分栏出现、列表出数、预览、恢复、删除各一次）
 - [ ] **隐私扫描**：仓库里没有本机路径、机器名、用户名、会话内容、凭据；

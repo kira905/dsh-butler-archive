@@ -14,6 +14,12 @@
 //   6) 在备份目录写一份 restore.mjs + restore.cmd（一键回滚，ASCII 内容）
 //
 // 它**不会**：改 dsh.profile.bundles、装依赖、跑包管理器、重启 DSH。
+//
+// ⚠️ 部署源 = 本仓 `lib/`（本仓发行版），**不是**任何 staging / 暂存目录。
+//    本仓与「生产自建的归档插件」可能是**两条演进线**（版本号、文件集都可能不同，
+//    例如本仓有 `lib/config.js` 而生产线有 `lib/host-adapter.js`）。
+//    若目标是**生产环境**，请用生产侧自带的那份部署脚本（与生产源码同目录、自包含 + sha256 自校验），
+//    不要用本脚本覆盖生产实体——本脚本装的是本仓这一份代码。
 import { existsSync, mkdirSync, readFileSync, writeFileSync, cpSync, rmSync, copyFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
