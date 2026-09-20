@@ -20,9 +20,9 @@ This is **not** the same as DSH's built-in "GUI archive", which only tags a sess
 This component is one implementation of the operations system described in
 [ops-handoff-design](https://github.com/kira905/ops-handoff-design):
 
-- **Why it exists / where its boundary is** → *Autonomous Ops Steward Design* **§2 L4 Archival**,
+- **Why it exists / where its boundary is** → *Autonomous Ops Steward* **§2 L4 Archival**,
   **§6 P2 event source "archive failure"**
-- **Host version compatibility range** → *Multi-Machine Handoff & Cloud Relay Design* **§4.5
+- **Host version compatibility range** → *Multi-Machine Handoff & Cloud Relay* **§4.5
   "Compatibility requirements"** (also section 5 below)
 - **Component-specific pitfalls and measurements** → the *Known limitations* section below, plus the
   compatibility regression checklist in [`docs/RELEASING.md`](docs/RELEASING.md)
@@ -32,7 +32,7 @@ This component is one implementation of the operations system described in
 ## Install
 
 ```bash
-git clone https://github.com/kira905/dsh-archive-sessions
+git clone https://github.com/kira905/dsh-butler-archive
 ```
 
 Then install it into your DSH profile (either way works):

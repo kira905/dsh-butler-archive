@@ -365,8 +365,8 @@ $env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --
 本组件是「[ops-handoff-design](https://github.com/kira905/ops-handoff-design)」所述运维体系的一个实现，
 设计依据（对应文档仓约定的固定四问）：
 
-- **它为什么存在、边界在哪** → 见《自治式运维管家设计》**§2 L4 归档**、**§6 P2 事件源「归档出错」**
-- **它与宿主版本的兼容区间** → 见《多机交接与云中继设计》**§4.5「兼容性要求」**（另见本 README 第五节）
+- **它为什么存在、边界在哪** → 见《自治式运维管家》**§2 L4 归档**、**§6 P2 事件源「归档出错」**
+- **它与宿主版本的兼容区间** → 见《多机交接与云中继》**§4.5「兼容性要求」**（另见本 README 第五节）
 - **本组件特有的坑与实测** → 见本 README「已知限制」一节，以及 `docs/RELEASING.md` 的兼容性回归清单
 - **文档仓地址** → Gitee（镜像）<https://gitee.com/kira905/ops-handoff-design>
   ｜ GitHub（主）<https://github.com/kira905/ops-handoff-design>
