@@ -1,6 +1,12 @@
-# dsh-archive-sessions
+# dsh-butler-archive
 
 [中文](README.md) · English
+
+> **Repository name ≠ package name.** This repository was renamed from `dsh-archive-sessions` to
+> **`dsh-butler-archive`** (older URLs on both hosts redirect automatically), but the **plugin package
+> name and its deployment directory remain `dsh-archive-sessions`** — that is the plugin id, tied to the
+> `cordis.patch.yml` insert entry and to `<DSH_HOME>/profiles/<name>/node_modules/<package>`. Every
+> package name below (install / register / route prefix) is therefore written with the real package name.
 
 A **DeepSeek Harness (DSH) web plugin** that adds an *Archived Sessions* section to the settings page:
 list, preview, restore and delete sessions that were **physically moved out** of the `sessions` directory.

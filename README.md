@@ -1,6 +1,11 @@
-# dsh-archive-sessions
+# dsh-butler-archive
 
 [English](README.en.md) · 中文（默认）
+
+> **仓库名与包名不是一回事（2026-09-16 起）**：本仓原名 `dsh-archive-sessions`，已更名为 **`dsh-butler-archive`**
+> （GitHub / Gitee 两端旧地址自动重定向）。但**插件包名与部署目录名仍是 `dsh-archive-sessions`** ——
+> 那是插件 id，牵连 `cordis.patch.yml` 的 insert 条目与 profile 里 `node_modules/<包名>` 的落地路径，
+> 因此本文档里所有**包名**（安装 / 注册 / 路由前缀 / 校验命令里的 `<包名>`）一律按实际包名写，**不随之更名**。
 
 一个 **DeepSeek Harness (DSH) Web 插件**：在设置页新增「归档会话管理」分栏，用来查看 / 预览 /
 恢复 / 删除那些被**物理移出** `sessions` 目录的老会话。
@@ -199,9 +204,19 @@ grep -n "id:" <DSH_HOME>/profiles/<name>/cordis.patch.yml
 |---|---|---|
 | `0.1.1-rc.2` | ✅ **已在真实 DSH 实例上跑通**（host 8 路由 + client 分栏全流程，26 项检查） | 当前验证基线 |
 | `0.1.1` 线其它补丁版 | ✅ 预期可用 | 未逐一实测 |
-| `>= 0.1.2` 且 `< 0.2.0` | ⚠️ 预期可用但**未端到端实测**：新线把 `@deepseek-ai/dsh-settings` 的 `installSettingsSection` / `settingsNamespace` 两个导出删掉了（旧的社区插件因此启动崩）。本插件不 import 这两个符号；client 分栏用的 `ctx.slots.inject("settings.section", …)` 在新线官方源码里仍在用（`@deepseek-ai/dsh-client-ui-settings-general` 0.1.5-rc.1 实测签名一致） | 依赖项已逐条静态核对 |
+| `0.1.2` – `0.1.4` | ⚠️ **未实测**（这几条线已不再发布新版本） | — |
+| `0.1.5` 线（实测 `0.1.5-rc.1`） | ✅ **静态核对通过（2026-09-21）**：本插件不 import 主包任何符号；实际用到的 5 处宿主接口（`webServer` 服务名、客户端 `slots`/`locale` 服务、`ctx.slots.inject("settings.section")`、`window.__ModuleLoader__`、seed 模块 `react`）在该线逐条取证仍在，且官方 `@deepseek-ai/dsh-client-ui-settings-general` 0.1.5 用的是**同一姿势** | 静态审计报告：《开源/兼容性静态审计-20260921》 |
+| `0.1.5-rc.2`（npm `latest`） | ⚠️ **预期可用，未端到端实测** | 与 rc.1 的差异未取证 |
 | `>= 0.2.0` | ❌ 未支持 | 主包尚未发布；破坏性变更宁可显式拒绝 |
 | `< 0.1.1-rc.2` | ❌ 未验证 | settings 分栏的 slot 形态可能不同 |
+
+> **依赖声明说明（重要）**：`package.json` 的 `dsh.client.inject` 里，
+> `@deepseek-ai/dsh-client-runtime`（该包在 0.1.2 之后**整包停更**）与
+> `@deepseek-ai/dsh-client-ui-slots` / `@deepseek-ai/dsh-client-ui-primitives`
+> （这两个包**从未**声明 `dsh.client`，属源码期核心库）在 0.1.5 线上是**无效条目**。
+> DSH 对无法解析的 inject 条目**静默跳过、不报错**，因此它们**不影响功能**；
+> 之所以保留，是因为 0.1.1 线上 `dsh-client-runtime` 确为客户端插件包。
+> 计划在下一版把它们从 `inject` 中移除，仅保留 `dsh-client-ui-settings` 与 `dsh-client-locale`。
 
 `package.json` 里对应声明：
 
@@ -346,11 +361,11 @@ node scripts/test-e2e.mjs          # --keep 保留临时目录便于排查
 #    启动 DSH 后先 curl 一下 list 路由，再硬刷新 GUI 看分栏
 
 # 4) 发布后复核（只读；要两端都验就都跑）
-node scripts/verify-publish.mjs --owner <账号> --repo dsh-archive-sessions
-node scripts/verify-publish.mjs --owner <账号> --repo dsh-archive-sessions --skip-github
+node scripts/verify-publish.mjs --owner <账号> --repo dsh-butler-archive
+node scripts/verify-publish.mjs --owner <账号> --repo dsh-butler-archive --skip-github
 
 # 5) 发布（幂等；token 走环境变量，不落盘、不写 git remote）
-$env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --owner <账号> --repo dsh-archive-sessions
+$env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --owner <账号> --repo dsh-butler-archive
 ```
 
 所有脚本都是**零依赖**的，不需要 `npm install`。
@@ -376,7 +391,25 @@ $env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --
 
 ---
 
-## 十一、许可与致谢
+## 十一、相关组件
+
+同属 DSH 生态的伴生组件，各自独立仓、独立版本、许可各自独立；它们都回链到同一份文档仓
+[`ops-handoff-design`](https://github.com/kira905/ops-handoff-design)
+（Gitee 镜像 <https://gitee.com/kira905/ops-handoff-design>）：
+
+| 组件仓 | 做什么 | 与本组件的关系 |
+|---|---|---|
+| `dsh-butler-archive` | 会话归档管理（列表 / 预览 / 恢复 / 删除 + 可选自动归档） | **本仓** |
+| [`dsh-session-title-live`](https://github.com/kira905/dsh-session-title-live) | 会话标题跟着对话实时更新 | 同一个问题的两面：本仓治「老会话占着加载开销」，它治「标题跟会话内容对不上」——都为了**侧边栏这个唯一入口还能用** |
+| [`dsh-ecosystem-panel`](https://github.com/kira905/dsh-ecosystem-panel) | 只读生态总览面板（插件加载 / 补丁 / 技能 frontmatter / 升级风险） | 它的第 ③ 类「魔改补丁健康」正是查**本仓这类靠 `cordis.patch.yml` insert 注册的组件**有没有断链；它只诊断、不动手，与本仓互不写入 |
+| [`dsh-diagnostic-tools`](https://github.com/kira905/dsh-diagnostic-tools) | 诊断取证工具组：依赖闭包体检 + 会话图片附件对账 | 宿主升级前后先跑它的 `closure/`；本仓的「会话日志格式耦合点」（见第五节）就是那类**升级后必须要回归**的判据 |
+
+> 组件之间**没有代码依赖**，也不共享运行时 —— 之所以互指，是因为它们回答的是同一类人的同一批问题
+> （长期在自有机器上跑 agent：装得下、找得到、看得见、查得清）。谁装谁不装，互不影响。
+
+---
+
+## 十二、许可与致谢
 
 **AGPL-3.0**（GNU Affero General Public License v3.0），见 [LICENSE](./LICENSE)。
 
@@ -398,7 +431,7 @@ $env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --
 <a id="english"></a>
 ## English (short version)
 
-**dsh-archive-sessions** is a web plugin for [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)
+**dsh-butler-archive** (repository name; the plugin package is still `dsh-archive-sessions`) is a web plugin for [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)
 that adds an "Archived Sessions" section to the settings page. It manages sessions that were
 **physically moved out** of the `sessions` directory (into `<DSH_HOME>/_archived-sessions/<batch>/<id>/`),
 letting you list, preview, restore and delete them — plus an optional, off-by-default, dry-run-first
@@ -410,8 +443,11 @@ auto-archiver.
   or DSH will fail to boot with `declares no dsh.bundle`.
 - Config file: `$ARCHIVE_SESSIONS_CONFIG`, else `<DSH_HOME>/<hostname>.archive-sessions.config.json`,
   else `<DSH_HOME>/archive-sessions.config.json`. Relative path values resolve against `<DSH_HOME>`.
-- Supported DSH: `>=0.1.1-rc.2 <0.2.0` (validated on `0.1.1-rc.2`; the settings-section registration
-  probes both the new `ctx.settings.installSection` and the legacy `ctx.slots.inject` APIs at runtime).
+- Supported DSH: `>=0.1.1-rc.2 <0.2.0` (validated end-to-end on `0.1.1-rc.2`; the `0.1.5` line was
+  **statically re-checked on 2026-09-21** — every host interface this plugin actually uses is still
+  present there — but `0.1.5-rc.2` has **not** been re-tested end-to-end; the settings-section
+  registration probes both the new `ctx.settings.installSection` and the legacy `ctx.slots.inject` APIs
+  at runtime).
 - Restore is two-phase (copy → byte-verify → delete source) and never overwrites an existing session.
 - Delete is permanent. Auto-archive is disabled by default and defaults to dry-run.
 
