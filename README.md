@@ -403,6 +403,8 @@ $env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --
 | [`dsh-session-title-live`](https://github.com/kira905/dsh-session-title-live) | 会话标题跟着对话实时更新 | 同一个问题的两面：本仓治「老会话占着加载开销」，它治「标题跟会话内容对不上」——都为了**侧边栏这个唯一入口还能用** |
 | [`dsh-ecosystem-panel`](https://github.com/kira905/dsh-ecosystem-panel) | 只读生态总览面板（插件加载 / 补丁 / 技能 frontmatter / 升级风险） | 它的第 ③ 类「魔改补丁健康」正是查**本仓这类靠 `cordis.patch.yml` insert 注册的组件**有没有断链；它只诊断、不动手，与本仓互不写入 |
 | [`dsh-diagnostic-tools`](https://github.com/kira905/dsh-diagnostic-tools) | 诊断取证工具组：依赖闭包体检 + 会话图片附件对账 | 宿主升级前后先跑它的 `closure/`；本仓的「会话日志格式耦合点」（见第五节）就是那类**升级后必须要回归**的判据 |
+| [`dsh-task-board-local`](https://github.com/kira905/dsh-task-board-local) | 自维护任务看板（卡片 = 一次真实会话 + 人工验收闸） | 本仓治的是**会话数量**（老会话退出 `sessions`、启动与加载开销降下来），它治的是**会话编排**（卡接活、跑完、被人验收）；两者共享同一批会话，但对象不同：本仓搬走的是"闲置的"，它管的是"正在被派活的" |
+| [`dsh-firstaid`](https://github.com/kira905/dsh-firstaid) | 零依赖急救台：起不来 / 假死 / 要撤销改动 / 数据被删四类现场压成一个入口 | 本仓的**移除/归档是写动作**，一旦误操作就属于它说的"要撤销改动 / 数据被删"；它也负责回答"最近改了什么、备份还在不在" |
 
 > 组件之间**没有代码依赖**，也不共享运行时 —— 之所以互指，是因为它们回答的是同一类人的同一批问题
 > （长期在自有机器上跑 agent：装得下、找得到、看得见、查得清）。谁装谁不装，互不影响。

@@ -4,6 +4,12 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.3.2] - 2026-09-28
+
+### Changed
+
+- **本轮文档更新（本次发版内容）**：README「相关组件」互链节补入本批新发布的两件伴生组件（自维护任务看板 `dsh-task-board-local`、零依赖急救台 `dsh-firstaid`）。本轮**无代码与行为改动**（推送内容仅 `README.md`）。
+
 ## [0.3.1] - 2026-09-22
 
 ### Changed
