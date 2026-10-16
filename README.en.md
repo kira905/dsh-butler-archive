@@ -113,15 +113,14 @@ Highlighted keys: `language`, `ui` / `uiByLanguage` (override every UI string),
 
 ## Compatibility
 
-`package.json` declares `"@deepseek-ai/dsh": ">=0.1.1-rc.2 <0.2.0"` (optional peer).
+`package.json` declares `"@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0"` (optional peer).
 
 | DSH host | Status | Notes |
 |---|---|---|
-| `0.1.1-rc.2` | ✅ **Validated end-to-end on a real DSH instance** (routes + settings section, 26 checks) | Current baseline |
-| other `0.1.1` patches | ✅ Expected to work | Not tested individually |
-| `>=0.1.2 <0.2.0` | ⚠️ Expected to work, **not end-to-end tested**: that line removed `installSettingsSection` / `settingsNamespace` from `@deepseek-ai/dsh-settings` (which is why older community plugins crash on boot). This plugin does not import those symbols, and the `ctx.slots.inject("settings.section", …)` API it uses is still present in `@deepseek-ai/dsh-client-ui-settings-general` on the new line (signature verified on `0.1.5-rc.1`) | Dependencies checked symbol by symbol |
-| `>=0.2.0` | ❌ Unsupported | Not released yet; breaking changes are rejected explicitly |
-| `<0.1.1-rc.2` | ❌ Untested | The settings-section slot may differ |
+| **`0.2.0-rc.2`** | ✅ **Measured end-to-end (2026-10-16)** | **The baseline of the range this version declares in `peerDependencies`**: installed and exercised for real on an isolated instance (separate data root + port 3090, host `0.2.0-rc.2`) — `scripts/verify-live.mjs` ran **26 checks, all PASS** against the live instance (real HTTP routes `list` / `detail` / `restore` / `delete` + real on-disk side effects + fixture self-cleanup); the client half `client.js` appears in the plugin resource list of the instance's startup HTML |
+| later `0.2.x` | ⚠️ **Not measured; no promise** | The declared upper bound is `<0.3.0`; cross-minor compatibility is unverified — re-run the script above after upgrading |
+| the `0.1.1-rc.2` – `0.1.5` lines | ⚠️ **Not end-to-end tested** (the declared baseline of `v0.3.2` and earlier) | **This version no longer declares a 0.1.x range**; users still on 0.1.x should stay on `v0.3.2` |
+| `< 0.1.1-rc.2` / `>= 0.3.0` | ❌ Untested | The settings-section slot may differ / breaking host changes were not assessed |
 
 **Runtime probing of two APIs.** The client half tries, in order:
 

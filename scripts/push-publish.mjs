@@ -2,7 +2,7 @@
 //
 // 用法（在仓库根目录执行）：
 //   # 先把 token 放进环境变量（不要写进命令行、不要写进脚本、不要提交）
-//   $env:OSS_PUSH_TOKEN='<token>'          # PowerShell
+//   # PowerShell: 设置名为 OSS_PUSH_TOKEN 的环境变量（值 = 你的访问令牌）
 //   node scripts/push-publish.mjs --platform gitee  --owner <账号> --repo dsh-archive-sessions
 //   node scripts/push-publish.mjs --platform github --owner <账号> --repo dsh-archive-sessions
 //

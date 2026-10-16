@@ -2,7 +2,7 @@
 //
 // 用法：
 //   node scripts/verify-live.mjs --base <url> --home <DSH_HOME> [--prefix <apiPrefix>]
-//   node scripts/verify-live.mjs --base http://127.0.0.1:3090 --home H:/test/.dsh --keep
+//   node scripts/verify-live.mjs --base http://127.0.0.1:3090 --home <隔离实例 home> --keep
 //
 // 它会：
 //   1) 在 <DSH_HOME>/_archived-sessions/<批次>/ 造 2 个**整条 id 带 verify-fixture 标记**的假会话

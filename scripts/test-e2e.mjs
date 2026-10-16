@@ -47,11 +47,11 @@ const w = (p, content) => {
 }
 
 // 会话 A：projcache 里有元数据（走快路径）
-const A = 'session-aaaaaaaa-1111-2222-3333-444444444444'
+const A = 'session-fixture-a'
 // 会话 B：projcache 里没有（走磁盘兜底）
-const B = 'session-bbbbbbbb-1111-2222-3333-444444444444'
+const B = 'session-fixture-b'
 // 会话 C：只用来测删除
-const C = 'session-cccccccc-1111-2222-3333-444444444444'
+const C = 'session-fixture-c'
 
 const baseTime = Date.parse('2026-01-02T03:04:05.000Z')
 const headerOf = (id, cwd) => ({ type: 'session', id, createdAt: baseTime, cwd })

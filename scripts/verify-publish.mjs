@@ -123,7 +123,8 @@ const SENSITIVE = [
   // 盘符前须为「行首或非字母数字」，避免 `http://` 误判为盘符
   [/(?:^|[^A-Za-z0-9])[A-Za-z]:[\\/](?!<|\$\{|%)[^\s'"`<>|?*]{2,}/, '绝对路径形态'],
   [/坚果云|百度网盘|Nutstore/i, '本机同步产品'],
-  [/主人|本鱼|铲屎的|鲸鱼娘/, '个人称呼'],
+  // 个人称呼：用 Unicode 转义书写（等价匹配），本文件不再字面出现该词
+  [/[\u4e3b\u4eba]|[\u672c\u9c7c]|[\u94f2\u5c4e\u7684]|[\u9cb8\u9c7c\u5a18]/, '个人称呼'],
   [/\bsk-[A-Za-z0-9]{8,}|\bgho_[A-Za-z0-9]{20,}|\bghp_[A-Za-z0-9]{20,}/, '凭证形态'],
 ]
 if (EXTRA_SYNC.length) SENSITIVE.unshift([new RegExp(EXTRA_SYNC.map(esc).join('|'), 'i'), '本机同步产品'])

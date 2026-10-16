@@ -1,6 +1,6 @@
 {
   "name": "dsh-archive-sessions",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "DSH web plugin: browse, preview, restore and delete sessions that were physically moved out of the sessions directory (archived sessions). Zero runtime dependencies.",
   "keywords": [
     "dsh",
@@ -39,7 +39,7 @@
     }
   },
   "peerDependencies": {
-    "@deepseek-ai/dsh": ">=0.1.1-rc.2 <0.2.0"
+    "@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0"
   },
   "peerDependenciesMeta": {
     "@deepseek-ai/dsh": {

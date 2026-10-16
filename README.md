@@ -202,13 +202,10 @@ grep -n "id:" <DSH_HOME>/profiles/<name>/cordis.patch.yml
 
 | DSH 主包 | 状态 | 说明 |
 |---|---|---|
-| `0.1.1-rc.2` | ✅ **已在真实 DSH 实例上跑通**（host 8 路由 + client 分栏全流程，26 项检查） | 当前验证基线 |
-| `0.1.1` 线其它补丁版 | ✅ 预期可用 | 未逐一实测 |
-| `0.1.2` – `0.1.4` | ⚠️ **未实测**（这几条线已不再发布新版本） | — |
-| `0.1.5` 线（实测 `0.1.5-rc.1`） | ✅ **静态核对通过（2026-09-21）**：本插件不 import 主包任何符号；实际用到的 5 处宿主接口（`webServer` 服务名、客户端 `slots`/`locale` 服务、`ctx.slots.inject("settings.section")`、`window.__ModuleLoader__`、seed 模块 `react`）在该线逐条取证仍在，且官方 `@deepseek-ai/dsh-client-ui-settings-general` 0.1.5 用的是**同一姿势** | 静态审计报告：《开源/兼容性静态审计-20260921》 |
-| `0.1.5-rc.2`（npm `latest`） | ⚠️ **预期可用，未端到端实测** | 与 rc.1 的差异未取证 |
-| `>= 0.2.0` | ❌ 未支持 | 主包尚未发布；破坏性变更宁可显式拒绝 |
-| `< 0.1.1-rc.2` | ❌ 未验证 | settings 分栏的 slot 形态可能不同 |
+| **`0.2.0-rc.2`** | ✅ **已端到端实测（2026-10-16）** | **本版 `peerDependencies` 声明的区间基线**：在隔离实例（独立数据根 + 端口 3090，主包 `0.2.0-rc.2`）上**真装真跑** —— 本仓 `scripts/verify-live.mjs` 对运行中的实例跑 **26 项检查全 PASS**（真实 HTTP 路由 `list` / `detail` / `restore` / `delete` + 真实磁盘副作用 + 夹具自清理）；客户端半 `client.js` 出现在实例启动 HTML 的插件资源清单里 |
+| `0.2.x` 后续版本 | ⚠️ **未实测，不作承诺** | 区间上界写 `<0.3.0`；次版本间是否仍兼容**未验证**，升级请重跑上面的实测脚本 |
+| `0.1.1-rc.2` ~ `0.1.5` 线 | ⚠️ **未端到端实测**（历史版本 `v0.3.2` 及之前的声明基线） | **本版起 `peerDependencies` 不再声明 0.1.x 区间**；仍跑 0.1.x 的用户请用 `v0.3.2` |
+| `< 0.1.1-rc.2` / `>= 0.3.0` | ❌ 未验证 | settings 分栏的 slot 形态可能不同 / 主包破坏性变更未评估 |
 
 > **依赖声明说明（重要）**：`package.json` 的 `dsh.client.inject` 里，
 > `@deepseek-ai/dsh-client-runtime`（该包在 0.1.2 之后**整包停更**）与
@@ -221,7 +218,7 @@ grep -n "id:" <DSH_HOME>/profiles/<name>/cordis.patch.yml
 `package.json` 里对应声明：
 
 ```json
-"peerDependencies": { "@deepseek-ai/dsh": ">=0.1.1-rc.2 <0.2.0" },
+"peerDependencies": { "@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0" },
 "peerDependenciesMeta": { "@deepseek-ai/dsh": { "optional": true } }
 ```
 
