@@ -2,11 +2,13 @@
 
 [中文](README.md) · English
 
-> **Repository name ≠ package name.** This repository was renamed from `dsh-archive-sessions` to
-> **`dsh-butler-archive`** (older URLs on both hosts redirect automatically), but the **plugin package
-> name and its deployment directory remain `dsh-archive-sessions`** — that is the plugin id, tied to the
-> `cordis.patch.yml` insert entry and to `<DSH_HOME>/profiles/<name>/node_modules/<package>`. Every
-> package name below (install / register / route prefix) is therefore written with the real package name.
+> **Three different names (as of 2026-10-19): the repository, the npm package and the runtime id.**
+> This repository was renamed from `dsh-archive-sessions` to **`dsh-butler-archive`** (older URLs on
+> both hosts redirect automatically); the **npm package is `@kira905/dsh-butler-archive`** as of this
+> version (the old `dsh-archive-sessions` package name exists only in historical releases).
+> The **runtime id stays `dsh-archive-sessions`** — the route prefix `/api/dsh-archive-sessions/…`,
+> the log prefix and the configuration file name are unchanged. Install/register sections below use
+> the npm package name; route/log/configuration sections use the real runtime values.
 
 A **DeepSeek Harness (DSH) web plugin** that adds an *Archived Sessions* section to the settings page:
 list, preview, restore and delete sessions that were **physically moved out** of the `sessions` directory.
@@ -37,25 +39,28 @@ This component is one implementation of the operations system described in
 
 ## Install
 
-```bash
-git clone https://github.com/kira905/dsh-butler-archive
-```
-
-Then install it into your DSH profile (either way works):
+The package is published on npm as **`@kira905/dsh-butler-archive`**. Pick one of three routes:
 
 **A — declare a dependency** in `profiles/<name>/package.json`:
 
 ```jsonc
-{ "dependencies": { "dsh-archive-sessions": "file:../../path/to/dsh-archive-sessions" } }
+{ "dependencies": { "@kira905/dsh-butler-archive": "^0.3.3" } }
 ```
 
 and install it with whatever command you normally use for that profile.
 
-**B — copy it in manually**: `cp -r dsh-archive-sessions <DSH_HOME>/profiles/<name>/node_modules/`
+**B — install straight into the profile**:
+
+```bash
+npm install @kira905/dsh-butler-archive --prefix <DSH_HOME>/profiles/<name>
+```
+
+**C — clone it (offline / you want to edit the source)**: `git clone https://github.com/kira905/dsh-butler-archive`,
+copy it to `<DSH_HOME>/profiles/<name>/node_modules/@kira905/dsh-butler-archive/`
 and add a mapping to `profiles/<name>/node_modules/.package-map.json`:
 
 ```json
-{ "packages": { "dsh-archive-sessions": { "url": "./dsh-archive-sessions", "dependencies": {} } } }
+{ "packages": { "@kira905/dsh-butler-archive": { "url": "./@kira905/dsh-butler-archive", "dependencies": {} } } }
 ```
 
 ### Register it — through `cordis.patch.yml` insert
@@ -65,9 +70,12 @@ Append the block from [`cordis.patch.yml.example`](./cordis.patch.yml.example) t
 
 ```yaml
 - insert:
-    - id: dsh-archive-sessions
-      name: 'dsh-archive-sessions'
+    - id: dsh-butler-archive
+      name: '@kira905/dsh-butler-archive'
 ```
+
+> Releases up to `0.3.3` used the id/name `dsh-archive-sessions`; when upgrading from those,
+> **remove the old entry before adding the new one**, or DSH fails with `duplicate loader entry id`.
 
 ⚠️ **Do not** put it into `dsh.profile.bundles`. This package declares `dsh.client` and no
 `dsh.bundle`, so listing it in `bundles` makes DSH **fail to boot** with `declares no dsh.bundle`.

@@ -2,10 +2,11 @@
 
 [English](README.en.md) · 中文（默认）
 
-> **仓库名与包名不是一回事（2026-09-16 起）**：本仓原名 `dsh-archive-sessions`，已更名为 **`dsh-butler-archive`**
-> （GitHub / Gitee 两端旧地址自动重定向）。但**插件包名与部署目录名仍是 `dsh-archive-sessions`** ——
-> 那是插件 id，牵连 `cordis.patch.yml` 的 insert 条目与 profile 里 `node_modules/<包名>` 的落地路径，
-> 因此本文档里所有**包名**（安装 / 注册 / 路由前缀 / 校验命令里的 `<包名>`）一律按实际包名写，**不随之更名**。
+> **仓库名 / npm 包名 / 运行时 id 三者不是一回事（2026-10-19 起）**：本仓原名 `dsh-archive-sessions`，
+> 更名 **`dsh-butler-archive`**（GitHub / Gitee 两端旧地址自动重定向）；**npm 包名自本版起为
+> `@kira905/dsh-butler-archive`**（旧的 `dsh-archive-sessions` 只存在于历史版本）。
+> 但**运行时标识仍是 `dsh-archive-sessions`** —— 路由前缀 `/api/dsh-archive-sessions/…`、日志前缀、
+> 配置文件名都不变；本文档里**安装 / 注册**段按 npm 包名写，**路由 / 日志 / 配置**段按运行时实际值写。
 
 一个 **DeepSeek Harness (DSH) Web 插件**：在设置页新增「归档会话管理」分栏，用来查看 / 预览 /
 恢复 / 删除那些被**物理移出** `sessions` 目录的老会话。
@@ -62,20 +63,14 @@
 
 ### 1. 把包放进去
 
-从 git 克隆：
-
-```bash
-git clone <your-fork-url> dsh-archive-sessions
-```
-
-然后在你的 DSH profile 目录里安装它（二选一）：
+包已发布到 npm：**`@kira905/dsh-butler-archive`**。装进 profile 三选一：
 
 **方式 A（推荐，声明式）**——在 `profiles/<name>/package.json` 里加一条依赖并安装：
 
 ```jsonc
 {
   "dependencies": {
-    "dsh-archive-sessions": "file:../../path/to/dsh-archive-sessions"
+    "@kira905/dsh-butler-archive": "^0.3.3"
   }
 }
 ```
@@ -85,10 +80,17 @@ cd <DSH_HOME>/profiles/<name>
 # 用你平时给这个 profile 装插件的那条命令安装（pnpm/npm 均可）
 ```
 
-**方式 B（手动，不装依赖）**——直接把包目录复制成实体目录：
+**方式 B（npm 直接装进 profile）**：
 
 ```bash
-cp -r dsh-archive-sessions <DSH_HOME>/profiles/<name>/node_modules/dsh-archive-sessions
+npm install @kira905/dsh-butler-archive --prefix <DSH_HOME>/profiles/<name>
+```
+
+**方式 C（git 克隆，离线 / 要改源码时）**——先把包目录复制成实体目录：
+
+```bash
+git clone https://github.com/kira905/dsh-butler-archive dsh-butler-archive
+cp -r dsh-butler-archive <DSH_HOME>/profiles/<name>/node_modules/@kira905/dsh-butler-archive
 ```
 
 同时给它补一条 package-map 映射（`profiles/<name>/node_modules/.package-map.json`）：
@@ -96,12 +98,12 @@ cp -r dsh-archive-sessions <DSH_HOME>/profiles/<name>/node_modules/dsh-archive-s
 ```json
 {
   "packages": {
-    "dsh-archive-sessions": { "url": "./dsh-archive-sessions", "dependencies": {} }
+    "@kira905/dsh-butler-archive": { "url": "./@kira905/dsh-butler-archive", "dependencies": {} }
   }
 }
 ```
 
-> 两种方式的差别只在于「谁负责把文件放到 `node_modules` 下」，插件本身的行为完全一致。
+> 三种方式的差别只在于「谁负责把文件放到 `node_modules` 下」，插件本身的行为完全一致。
 
 ### 2. 注册插件（关键，别跳过）
 
@@ -110,9 +112,12 @@ cp -r dsh-archive-sessions <DSH_HOME>/profiles/<name>/node_modules/dsh-archive-s
 
 ```yaml
 - insert:
-    - id: dsh-archive-sessions
-      name: 'dsh-archive-sessions'
+    - id: dsh-butler-archive
+      name: '@kira905/dsh-butler-archive'
 ```
+
+> 旧版（≤ `0.3.3` 的发布形态）条目 id/name 是 `dsh-archive-sessions`；从旧版升级时**先删掉旧条目再加新条目**，
+> 否则会撞 `duplicate loader entry id`。
 
 ⚠️ **不要**把它写进 `package.json` 的 `dsh.profile.bundles`。本插件的 client 半声明了
 `dsh.client` 而没有 `dsh.bundle`，放进 bundles 会让 DSH **启动即崩**，报
@@ -323,7 +328,7 @@ server.register(route);
 ## 八、仓库结构
 
 ```
-dsh-archive-sessions/
+dsh-butler-archive/
 ├─ lib/
 │  ├─ index.js                 host 半：路由 + 扫描/预览/恢复/删除/自动归档
 │  ├─ client.js                client 半：设置页分栏 UI
@@ -430,7 +435,8 @@ $env:OSS_PUSH_TOKEN='<token>'; node scripts/push-publish.mjs --platform gitee --
 <a id="english"></a>
 ## English (short version)
 
-**dsh-butler-archive** (repository name; the plugin package is still `dsh-archive-sessions`) is a web plugin for [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)
+**dsh-butler-archive** (repository; npm package `@kira905/dsh-butler-archive`; runtime id
+`dsh-archive-sessions`) is a web plugin for [DeepSeek Harness](https://www.npmjs.com/package/@deepseek-ai/dsh)
 that adds an "Archived Sessions" section to the settings page. It manages sessions that were
 **physically moved out** of the `sessions` directory (into `<DSH_HOME>/_archived-sessions/<batch>/<id>/`),
 letting you list, preview, restore and delete them — plus an optional, off-by-default, dry-run-first

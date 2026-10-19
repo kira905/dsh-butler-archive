@@ -1,4 +1,4 @@
-# dsh-archive-sessions — cordis patch 片段（示例 / 模板）
+# @kira905/dsh-butler-archive — cordis patch 片段（示例 / 模板）
 #
 # 用法：把下面这一段追加到你所用 profile 的 cordis.patch.yml 末尾
 #       （profile 目录：<DSH_HOME>/profiles/<name>/cordis.patch.yml）。
@@ -15,8 +15,8 @@
 # 这里的键会作为插件起始 config 传给 apply(ctx)，等价于「配置文件的一层前置默认值」。
 
 - insert:
-    - id: dsh-archive-sessions
-      name: 'dsh-archive-sessions'
+    - id: dsh-butler-archive
+      name: '@kira905/dsh-butler-archive'
       # config:
       #   language: zh
       #   archive:
