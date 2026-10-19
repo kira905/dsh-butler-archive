@@ -4,6 +4,21 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.3.4] - 2026-10-19
+
+### Fixed
+
+- 🔴 **设置页里的「归档会话管理」在 DSH 0.2.0 主包上不出现 —— 已修**。`lib/client.js` 的
+  `__ModuleLoader__.load({ id })` 登记的是旧名 `dsh-archive-sessions`，而 0.2.0 的
+  `dsh-client-modules` 按**条目 id = 包名**（`@kira905/dsh-butler-archive`）找 factory ⇒
+  资源 HTTP 200、控制台报 `loaded without registering … via __ModuleLoader__.load`，
+  插件永不挂载。本版把登记 id 改成包名。
+  影响面：**只影响浏览器端是否挂载**；host 半路由（`/api/dsh-archive-sessions/*`）此前一直可用。
+- 说明：本仓 `lib/` 是**手写源码**（无构建步骤、无 `src/`），因此没有「改 src 再 build」这一步，
+  `lib/client.js` 就是源头。
+- `module.exports.name`（cordis 插件名）**刻意保持** `dsh-archive-sessions/client` 不变 ——
+  它只用于日志/标签，不参与模块查找；改它对本次故障无帮助。
+
 ## [0.3.3] - 2026-10-16
 
 ### Changed
