@@ -1,0 +1,17 @@
+# Bundle patch for @kira905/dsh-butler-archive.
+#
+# This file is what `dsh.bundle.patch` in package.json points at. When the
+# package is installed as a profile layer (`dsh plugin --profile <name> add
+# @kira905/dsh-butler-archive`, or listed in `dsh.profile.bundles`), DSH boots
+# this layer and inserts the row below automatically — no manual edit of the
+# profile's own cordis.patch.yml is needed.
+#
+# The row id must not collide with any other loader entry id; a duplicate
+# aborts startup with "duplicate loader entry id".
+#
+# The `config` block is optional: omit it and lib/config.js defaults plus
+# <DSH_HOME>/archive-sessions.config.json apply as usual. A `config` written
+# here is the lowest-priority layer, i.e. a set of pre-defaults.
+- insert:
+    - id: dsh-butler-archive
+      name: '@kira905/dsh-butler-archive'

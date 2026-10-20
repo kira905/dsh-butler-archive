@@ -48,7 +48,7 @@
 
 ## 二、前置条件
 
-- DSH 主包 `>= 0.1.1-rc.2 < 0.2.0`（版本区间与兼容性细节见第五节）
+- DSH 主包 `>= 0.2.0-rc.2 < 0.3.0`（版本区间与兼容性细节见第五节）
 - Node.js `>= 20`
 - 一个能写 `profiles/<name>/` 的 DSH 安装（默认 profile 名为 `web`）
 
@@ -63,14 +63,24 @@
 
 ### 1. 把包放进去
 
-包已发布到 npm：**`@kira905/dsh-butler-archive`**。装进 profile 三选一：
+包已发布到 npm：**`@kira905/dsh-butler-archive`**。
+
+**方式 0（推荐，0.3.5 起）—— 走 DSH 插件管理器，bundle 层自动挂载**：
+
+```bash
+dsh plugin --profile web add @kira905/dsh-butler-archive
+```
+
+本包自带 `cordis.patch.yml`（`package.json#dsh.bundle`），装它 = profile 拿到一个层，**不用手工改 profile 的 `cordis.patch.yml`**（也就跳过后面的第 2 步）。
+
+下面的方式 A/B/C 是「手工装」的三个变体，装完还要按第 2 步手工注册。
 
 **方式 A（推荐，声明式）**——在 `profiles/<name>/package.json` 里加一条依赖并安装：
 
 ```jsonc
 {
   "dependencies": {
-    "@kira905/dsh-butler-archive": "^0.3.3"
+    "@kira905/dsh-butler-archive": "^0.3.5"
   }
 }
 ```
@@ -105,10 +115,11 @@ cp -r dsh-butler-archive <DSH_HOME>/profiles/<name>/node_modules/@kira905/dsh-bu
 
 > 三种方式的差别只在于「谁负责把文件放到 `node_modules` 下」，插件本身的行为完全一致。
 
-### 2. 注册插件（关键，别跳过）
+### 2. 注册插件（只有「手工装法」要这一步）
 
-**必须**用 profile 的 `cordis.patch.yml` 里的 `insert` 注册，把
-[`cordis.patch.yml.example`](./cordis.patch.yml.example) 里的那段追加进去：
+**走方式 0 就跳过本节** —— bundle 层已经把它插好了。下面只给手工装（方式 A/B/C）用：
+把 [`cordis.patch.yml.example`](./cordis.patch.yml.example) 里的 `insert` 段追加进 profile 的
+`cordis.patch.yml`：
 
 ```yaml
 - insert:
@@ -119,9 +130,9 @@ cp -r dsh-butler-archive <DSH_HOME>/profiles/<name>/node_modules/@kira905/dsh-bu
 > 旧版（≤ `0.3.3` 的发布形态）条目 id/name 是 `dsh-archive-sessions`；从旧版升级时**先删掉旧条目再加新条目**，
 > 否则会撞 `duplicate loader entry id`。
 
-⚠️ **不要**把它写进 `package.json` 的 `dsh.profile.bundles`。本插件的 client 半声明了
-`dsh.client` 而没有 `dsh.bundle`，放进 bundles 会让 DSH **启动即崩**，报
-`declares no dsh.bundle`。client 插件一律走 patch insert。
+⚠️ **两种装法别混用**：走方式 0（bundle 层）时，profile 的 `cordis.patch.yml` 里**不要再手工追加**
+上面这段 —— 同一个 id 注册两遍会崩 `duplicate loader entry id`。反过来，已经手工 insert 过的现有安装
+继续手工即可，或先删掉手工条目再改走方式 0。
 
 ⚠️ `insert` 的 `id` 不能和已有条目重复，重复会崩 `duplicate loader entry id`。加之前先查：
 
@@ -335,7 +346,8 @@ dsh-butler-archive/
 │  └─ config.js                配置层（默认值 / 文件 / 环境变量 / 校验 / 文案）
 ├─ examples/
 │  └─ archive-sessions.config.example.json   配置示例（含全部默认值）
-├─ cordis.patch.yml.example    注册用的 patch insert 片段
+├─ cordis.patch.yml            bundle patch（`dsh.bundle` 指向它；方式 0 自动挂载）
+├─ cordis.patch.yml.example    手工注册 / 全部配置键参考（旧版装法用）
 ├─ scripts/
 │  ├─ test-e2e.mjs             端到端测试（干净临时路径 + 独立配置 + 真实 HTTP，跑通全流程）
 │  ├─ test-host.mjs            测试宿主：把 host 半挂在最小 webServer 上
@@ -444,11 +456,13 @@ auto-archiver.
 
 - Zero runtime dependencies (only `node:fs` / `node:path` / `node:zlib` / `node:os`).
 - host half: 8 loopback-only HTTP routes. client half: one settings section.
-- Register it through `cordis.patch.yml` **insert** — never through `dsh.profile.bundles`,
-  or DSH will fail to boot with `declares no dsh.bundle`.
+- Install it with `dsh plugin --profile <name> add @kira905/dsh-butler-archive` (declares `dsh.bundle`,
+  so the profile gets a layer that inserts the row automatically). Manual route: append the
+  `cordis.patch.yml.example` block to the profile's `cordis.patch.yml` — use one route or the other,
+  never both (the same id twice fails with `duplicate loader entry id`).
 - Config file: `$ARCHIVE_SESSIONS_CONFIG`, else `<DSH_HOME>/<hostname>.archive-sessions.config.json`,
   else `<DSH_HOME>/archive-sessions.config.json`. Relative path values resolve against `<DSH_HOME>`.
-- Supported DSH: `>=0.1.1-rc.2 <0.2.0` (validated end-to-end on `0.1.1-rc.2`; the `0.1.5` line was
+- Supported DSH: `>=0.2.0-rc.2 <0.3.0` (validated end-to-end on `0.2.0-rc.2`; the `0.1.5` line was
   **statically re-checked on 2026-09-21** — every host interface this plugin actually uses is still
   present there — but `0.1.5-rc.2` has **not** been re-tested end-to-end; the settings-section
   registration probes both the new `ctx.settings.installSection` and the legacy `ctx.slots.inject` APIs

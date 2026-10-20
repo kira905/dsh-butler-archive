@@ -4,6 +4,29 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.3.5] - 2026-10-20
+
+### Added
+
+- **本包现在声明 `dsh.bundle`，是「可安装」的 DSH 插件**：`package.json#dsh.bundle.patch = ./cordis.patch.yml`，
+  仓库根新增 `cordis.patch.yml`（`insert`：`id: dsh-butler-archive` / `name: '@kira905/dsh-butler-archive'`）。
+  此前只声明 `dsh.client`，走「声明式安装」时 DSH 只把它当**普通依赖**装、**不加载**，并给一条
+  `warning: … declares no dsh.bundle — installed as a plain dependency, not a profile layer`。
+  现在 `dsh plugin --profile <name> add @kira905/dsh-butler-archive` 会把它作为 **profile 层**自动挂载，
+  **不用再手工改 profile 的 `cordis.patch.yml`**。
+  影响面 / 迁移动作：**已经手工 insert 过的现有安装别跟着再走 bundle 层** —— 同一条 id 会撞
+  `duplicate loader entry id`；要么继续用手工那条，要么先删掉手工条目再改走 bundle。
+- `files` 补 `cordis.patch.yml`（保证 npm 包里带上它）。
+
+### Changed
+
+- `cordis.patch.yml.example` 改写为「**旧版 / 手动注册参考**」：删掉「本插件没有 `dsh.bundle`、
+  写进 `bundles` 会启动即崩」这条**已被本版推翻的前提**，改为「正常走 bundle 层；手工 insert
+  只用于老宿主 / 手工拷贝安装」，并保留全部 `config` 键作参考。**选择改写而非删除**：它目前是
+  仓里唯一把 `config` 各键列全的地方，老装法也仍要用它。
+- 宿主兼容区间、运行时行为、HTTP 路由**均无改动**（本轮推送内容为 `package.json` +
+  `cordis.patch.yml` + 该示例文件 + README 安装段 + 本文件）。隔离实例实测记录见交付报告。
+
 ## [0.3.4] - 2026-10-19
 
 ### Fixed

@@ -39,12 +39,22 @@ This component is one implementation of the operations system described in
 
 ## Install
 
-The package is published on npm as **`@kira905/dsh-butler-archive`**. Pick one of three routes:
+The package is published on npm as **`@kira905/dsh-butler-archive`**.
+
+**Route 0 (recommended, since 0.3.5) — install it through the DSH plugin manager; the bundle layer mounts it for you**:
+
+```bash
+dsh plugin --profile web add @kira905/dsh-butler-archive
+```
+
+The package ships its own `cordis.patch.yml` (`package.json#dsh.bundle`), so installing it hands the profile a layer and **you do not edit the profile's `cordis.patch.yml` at all**.
+
+Routes A/B/C below are the three manual variants; after those you still need the registration step.
 
 **A — declare a dependency** in `profiles/<name>/package.json`:
 
 ```jsonc
-{ "dependencies": { "@kira905/dsh-butler-archive": "^0.3.3" } }
+{ "dependencies": { "@kira905/dsh-butler-archive": "^0.3.5" } }
 ```
 
 and install it with whatever command you normally use for that profile.
@@ -63,9 +73,10 @@ and add a mapping to `profiles/<name>/node_modules/.package-map.json`:
 { "packages": { "@kira905/dsh-butler-archive": { "url": "./@kira905/dsh-butler-archive", "dependencies": {} } } }
 ```
 
-### Register it — through `cordis.patch.yml` insert
+### Register it — manual routes only
 
-Append the block from [`cordis.patch.yml.example`](./cordis.patch.yml.example) to
+**Skip this when you used Route 0**; the bundle layer already inserted the row. For the manual routes,
+append the `insert` block from [`cordis.patch.yml.example`](./cordis.patch.yml.example) to
 `profiles/<name>/cordis.patch.yml`:
 
 ```yaml
@@ -77,9 +88,10 @@ Append the block from [`cordis.patch.yml.example`](./cordis.patch.yml.example) t
 > Releases up to `0.3.3` used the id/name `dsh-archive-sessions`; when upgrading from those,
 > **remove the old entry before adding the new one**, or DSH fails with `duplicate loader entry id`.
 
-⚠️ **Do not** put it into `dsh.profile.bundles`. This package declares `dsh.client` and no
-`dsh.bundle`, so listing it in `bundles` makes DSH **fail to boot** with `declares no dsh.bundle`.
-Client plugins always go through a patch insert.
+⚠️ **Do not mix the two routes.** When you install through Route 0 (a bundle layer), do *not* also
+append the block above into the profile's `cordis.patch.yml` — the same id twice makes DSH fail with
+`duplicate loader entry id`. Existing hand-registered installs can stay as they are, or drop the manual
+entry and switch to Route 0.
 
 ⚠️ The insert `id` must be unique, or DSH fails with `duplicate loader entry id`. Check first:
 
@@ -188,7 +200,8 @@ lib/index.js      host half: routes, scanning, preview, restore, delete, auto-ar
 lib/client.js     client half: the settings-page section
 lib/config.js     config layer (defaults / file / env / validation / UI strings)
 examples/         config example with every default
-cordis.patch.yml.example   the insert block used to register the plugin
+cordis.patch.yml           the bundle patch `dsh.bundle` points at (Route 0 mounts it)
+cordis.patch.yml.example   the manual insert block, with every config key spelled out
 scripts/          deploy.mjs, verify-source.mjs, test-e2e.mjs, test-host.mjs, verify-live.mjs, push-publish.mjs
 docs/RELEASING.md versioning policy, changelog rules, release checklist
 ```

@@ -1,14 +1,23 @@
-# @kira905/dsh-butler-archive — cordis patch 片段（示例 / 模板）
+# @kira905/dsh-butler-archive — 手工 patch 片段（旧版 / 手动注册参考）
 #
-# 用法：把下面这一段追加到你所用 profile 的 cordis.patch.yml 末尾
-#       （profile 目录：<DSH_HOME>/profiles/<name>/cordis.patch.yml）。
+# 从 0.3.5 起，本包在 package.json 里声明了 `dsh.bundle`，**正常情况下不需要本文件**：
+#   用 `dsh plugin --profile <name> add @kira905/dsh-butler-archive`
+#   （或把它列进 profile package.json 的 `dsh.profile.bundles`），
+#   DSH 会把仓库根的 `cordis.patch.yml` 当作 bundle patch 自动装进来。
 #
-# ⚠️ 为什么必须走 patch 的 insert，而不能放进 profile package.json 的 dsh.profile.bundles：
-#    本插件带 client 半（package.json 里声明了 dsh.client 而没有声明 dsh.bundle），
-#    把它塞进 bundles 会让 DSH 启动即崩，报 "declares no dsh.bundle"。
-#    client 插件一律走 patch insert（或在 profile 未受 bundles 管理时直接靠依赖解析加载）。
+# 本文件仍然有用，用于两种场景：
+#   ① **老宿主 / 老装法**：把包装进 profile 但没走 bundle 层（例如手工把目录拷进
+#      `node_modules`），此时需要手工把下面那一段 insert 追加到 profile 的
+#      `cordis.patch.yml` 末尾（profile 目录：<DSH_HOME>/profiles/<name>/cordis.patch.yml）；
+#      注意这时的条目 id/name 必须与旧装的运行时名一致（≤0.3.3 用 `dsh-archive-sessions`）。
+#   ② **想改起始配置**：本文件把 `config` 各键列全了，可作为写法参考。等价地，
+#      你也可以把这些键写进 profile 的 patch，或写 `archive-sessions.config.json`。
 #
-# ⚠️ insert 前先确认 id 不与已有条目重复（重复会崩 "duplicate loader entry id"）：
+# ⚠️ 不要和 bundle 层**同时**注册：两种装法都插同一条 id，会崩
+#    "duplicate loader entry id"。走 bundle 层时，profile 的 cordis.patch.yml 里
+#    不要再追加下面这段。
+#
+# ⚠️ insert id 不能和已有条目重复，加之前先查：
 #    grep -n "id:" <DSH_HOME>/profiles/<name>/cordis.patch.yml
 #
 # config 段是可选的：不写就用 lib/config.js 的默认值 + <DSH_HOME>/archive-sessions.config.json。
