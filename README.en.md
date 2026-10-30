@@ -23,6 +23,50 @@ This is **not** the same as DSH's built-in "GUI archive", which only tags a sess
 - **client half** — one settings-page section (grouped by working directory, inline preview, restore, delete)
 - **Zero third-party runtime dependencies** — only `node:fs` / `node:path` / `node:zlib` / `node:os`
 
+## Why archiving used to freeze the whole process (fixed in v0.4.0)
+
+The DSH host process runs a **single-threaded event loop**, and v0.3.x moved sessions with *synchronous*
+calls (`cpSync` / `statSync`) that never handed the thread back. Archiving a large batch therefore did
+not just "take a while" — it **blocked the whole process**: other HTTP requests, other running sessions
+and every timer sat in the queue until the copy finished.
+
+Three causes, all fixed in v0.4.0:
+
+| Area | Old behaviour | Why it blocked | Now |
+|---|---|---|---|
+| Copy | `cpSync` the whole directory, then a synchronous `statSync` walk to verify | one long synchronous call owns the thread | per-file **streamed** async copies (each chunk returns to the loop) with an explicit **macrotask** yield every `archive.copyBatchBytes` / `archive.copyBatchFiles` |
+| Candidate scan | `statSync` on every entry to ask "is this a directory / does it hold a session file" | hundreds of synchronous disk round-trips | a single `readdir(recursive)` collects the whole tree as Dirents; only directories that really hold a session file get one `stat` for size/mtime |
+| Index | load the entire `session_projcache.json` table, then filter by id | slower as the table grows, and fully synchronous | single-key read of `session_projcache/sessions/<id>.json` (falls back to the table only when the key file is missing) |
+
+> ⚠️ Yielding must use a **macrotask** (`setImmediate`). Wrapping sync work in `Promise.resolve()` is
+> *fake* async: microtasks only hand the stack to other microtasks in the same turn, so IO callbacks and
+> timers never run.
+
+Two more guarantees came with it:
+
+- **Single-flight lock.** A second trigger while a run is in progress returns immediately — it is never
+  queued and never starts a second copy:
+  `{ "ok": false, "alreadyRunning": true, "code": "already-running", "running": { "trigger": "timer", "startedAt": ..., "elapsedMs": ..., "phase": "copy" } }`.
+- **Re-entrant half-done state.** The idempotency key is **`sessionId` + target batch directory**
+  (never the source path — that path changes once the session moves). A `pendingBatch` entry makes the
+  next run reuse the same batch directory; an in-progress marker (`<batch>/.in-progress/<id>.json`) marks
+  a partial copy so the next run only fills in the missing files. If the target already exists with
+  **different bytes** and no marker, it is reported as a **conflict**: nothing is overwritten and the
+  source is kept. Comparisons use sha256, not just file size.
+
+Measured (40 sessions × 2 MB = 80 MB, 5 ms heartbeat recording the longest loop stall, two runs):
+
+| | Longest loop stall | Total copy time |
+|---|---|---|
+| v0.3.x (synchronous) | **988.8 / 1200.1 ms** (basically the whole run) | 989 / 1200 ms |
+| v0.4.0 (async batching) | **18.7 / 16.1 ms** | 807 / 1095 ms |
+
+```bash
+node scripts/test-archive-concurrency.mjs   # two concurrent triggers ⇒ one run, one copy on disk
+node scripts/test-archive-resume.mjs        # half-done target ⇒ only the missing files are copied
+node scripts/test-archive-duplicate.mjs     # identical duplicate skipped / different bytes ⇒ conflict, no overwrite
+```
+
 ## Design rationale
 
 This component is one implementation of the operations system described in

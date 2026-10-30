@@ -4,6 +4,47 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.4.0] - 2026-10-30
+
+### Fixed
+
+- 🔴 **一大批会话归档时，整个 DSH 进程会被按住（事件循环被同步搬运占死）—— 已修**。
+  之前自动归档用 `cpSync` + 同步 `statSync` 走完整目录，中间一次都不把线程还回去：几十上百 MB
+  的搬运期间，别的 HTTP 请求、别的会话、定时器全部排队，表现就是"全站卡死 / 转圈 / 心跳超时"。
+  现在：
+  - 搬运改成**逐文件流式异步复制**（读一块写一块，天然回到事件循环），并每累计
+    `archive.copyBatchBytes`（默认 1 MiB）/ `archive.copyBatchFiles`（默认 8 个文件）
+    **主动 `await` 一次宏任务**让出事件循环；
+  - 候选扫描改成**一次 `readdir(recursive)` 全树扫**（Dirent 自带类型），不再对每个目录项
+    `statSync` 问"你是目录吗 / 里面有没有数据文件"，只有真带会话文件的目录才 `stat` 一次；
+  - 会话索引改成**单键读** `session_projcache/sessions/<id>.json`，不再整表加载后筛
+    （读不到该键文件才回退整表，老数据 / 只写整表的环境行为不变）。
+  实测（40 个会话 × 2 MB，5 ms 心跳量最长阻塞）：**988.8 / 1200.1 ms → 18.7 / 16.1 ms**，
+  搬运总耗时没有变差（989 / 1200 ms → 807 / 1095 ms）。
+  影响面：自动归档的运行期行为；对外 HTTP 路由与请求/返回形状**不变**。
+- **同一次归档可能被跑两遍 —— 已修**：新增**单飞锁**。同一时刻只允许一个归档任务，
+  第二次触发立刻返回（不排队、不重跑）：
+  `{ ok: false, alreadyRunning: true, code: "already-running", running: { trigger, startedAt, elapsedMs, phase } }`。
+  设置页点「立即试跑」撞上定时器时会显示「已经在跑了（谁 / 从什么时候开始）」，而不是再跑一遍。
+
+### Added
+
+- **半完成态可重入**：搬到一半进程崩了 / 机器重启，下一轮**接着搬**而不是重搬。
+  幂等键 = `sessionId` + 目标批次目录（**不是源路径** —— 会话搬走后源路径就变了）；
+  状态文件里的 `pendingBatch` 让下一轮复用同一批次目录；`<批次>/.in-progress/<id>.json`
+  标记"这是我写到一半的"，重入时只补缺的文件、已一致的文件跳过。目标里已有同名会话但
+  **字节不一致且没有标记** ⇒ 报 `conflicts`、**原样保留、绝不覆盖、也不动源**。
+  判据用 sha256（同名同大小不同内容必须算冲突）。
+- 自动归档结果体新增字段（**追加，不破坏既有字段**）：`runId` / `alreadyRunning` / `running` /
+  `resumed` / `alreadyArchived` / `conflicts` / `batchResumed` / `copiedFiles` / `reusedFiles` /
+  `durationMs`。
+- 配置新增三个键：`paths.projcacheSessionsDir`（索引单键目录）、`archive.copyBatchBytes`、
+  `archive.copyBatchFiles`（搬运让出节奏）。示例文件已同步。
+- 三条专项夹具（都能**证红**：把对应防线拆掉即失败）：`scripts/test-archive-concurrency.mjs`、
+  `scripts/test-archive-resume.mjs`、`scripts/test-archive-duplicate.mjs`，
+  共用小工具 `scripts/_fixture-support.mjs`（临时 home + `USERPROFILE`/`HOME`/`DSH_HOME` 三件套隔离）。
+- README 新增一节「为什么归档会把整个进程卡住」（含前后实测读数），`README.en.md` 有对应英文版。
+
 ## [0.3.5] - 2026-10-20
 
 ### Added

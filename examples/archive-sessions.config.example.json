@@ -20,7 +20,8 @@
     "sessionsRoot": null,
     "storagesDir": null,
     "workspaceFile": null,
-    "projcacheFile": null
+    "projcacheFile": null,
+    "projcacheSessionsDir": null
   },
   "archive": {
     "manifestFile": "manifest.json",
@@ -30,7 +31,9 @@
     "copyRetries": 3,
     "copyRetryDelayMs": 120,
     "removeRetries": 4,
-    "removeRetryDelayMs": 180
+    "removeRetryDelayMs": 180,
+    "copyBatchBytes": 1048576,
+    "copyBatchFiles": 8
   },
   "preview": {
     "maxMessages": 50,

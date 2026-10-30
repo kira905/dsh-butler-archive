@@ -68,6 +68,66 @@ Get-Content <数据根>/profiles/<profile>/package.json | Select-String "@kira90
 
 ---
 
+## 为什么归档会把整个进程卡住（v0.4.0 起已修）
+
+**一句话**：DSH 的 agent 主进程是**单线程事件循环**，而 v0.3.x 的归档搬运是**同步**的 ——
+`cpSync` / `statSync` 一路跑到底，中间一次都不把线程还回去。于是「归档一大批会话」这件事
+不是"归档慢"，而是**整个进程被按住**：这段时间里别的 HTTP 请求（包括你正在看的界面、
+别的正在跑的会话）全在排队，看起来就是全站卡死、转圈、心跳超时。
+
+三处病灶（v0.4.0 全改掉）：
+
+| 病灶 | 老做法 | 为什么卡 | 现在 |
+|---|---|---|---|
+| 搬运 | `cpSync` 整目录 + 同步 `statSync` 再走一遍比对 | 一次同步调用占满线程，几十上百 MB 期间事件循环完全不转 | 逐文件**流式**异步复制（读一块写一块，天然回到事件循环），并每累计 `archive.copyBatchBytes` / `archive.copyBatchFiles` 主动 `await` 一次**宏任务**让出 |
+| 候选扫描 | 每个目录项 `statSync` 问一次「你是目录吗 / 里面有没有数据文件」 | 会话一多就是成百上千次同步磁盘往返 | 一次 `readdir(recursive)` 拿整棵树的目录项（Dirent 自带类型），只有真有会话文件的目录才 `stat` 一次取大小 / mtime |
+| 索引 | 整张 `session_projcache.json` 表加载进内存再按 id 筛 | 表越大越慢，且全程同步解析 | 单键读 `session_projcache/sessions/<id>.json`，一条会话只读它自己那一个文件（读不到才回退整表） |
+
+> ⚠️ 让出事件循环必须用**宏任务**（`setImmediate`）。把同步调用包进 `Promise.resolve()` 是**假异步**：
+> 微任务只是把栈交给同一轮里排在后面的微任务，IO 回调与定时器根本轮不到。
+
+顺带修掉的第二件事：**同一次归档可能被跑两遍**（定时器到点 + 手动点「立即试跑」撞在一起，
+或者上一轮还没搬完下一轮又起来了）。v0.4.0 加了**单飞锁**：
+
+- 同一时刻只允许一个归档任务。第二次触发**立刻返回**（不排队、不重跑）：
+
+  ```json
+  {
+    "ok": false, "alreadyRunning": true, "code": "already-running",
+    "running": { "runId": "run-1-...", "trigger": "timer", "startedAt": 1793350725991, "elapsedMs": 812, "phase": "copy" }
+  }
+  ```
+
+- 「谁在跑、从什么时候开始、跑到哪一步」都在 `running` 里，界面直接显示「已经在跑了」。
+
+第三件事：**半完成态可重入** —— 搬到一半进程崩了 / 机器重启了，下一轮**接着搬**，而不是重搬一遍：
+
+- **幂等键 = `sessionId` + 目标批次目录**（⚠️ 不是源路径 —— 会话搬走后源路径就变了，拿它当键必然错）。
+- 状态文件里记一个 `pendingBatch`，下一轮复用同一个批次目录，于是"同一件事"能被认出来。
+- 四态判定：目标不存在 ⇒ 全新搬；目标与源**逐字节一致** ⇒ 记「已搬」、只补删源那一步；
+  目标里留着**搬运中标记**（`<批次>/.in-progress/<id>.json`）⇒ 半完成态，只补缺的文件（已一致的文件跳过）；
+  目标存在但**没有标记、内容又不一致** ⇒ **报冲突、原样保留、绝不覆盖**（宁可停下等人看）。
+- 判据用 sha256，不只比大小 —— 同名同大小、内容不同的文件必须算冲突。
+
+想自己看一眼（三条夹具都能跑红，见 `scripts/`）：
+
+```bash
+node scripts/test-archive-concurrency.mjs   # 并发两次只跑一次
+node scripts/test-archive-resume.mjs        # 半完成态只补缺的
+node scripts/test-archive-duplicate.mjs     # 重复副本不重搬 / 冲突不覆盖
+```
+
+实测（40 个会话 × 2 MB = 80 MB；搬运期间用 5 ms 心跳量「事件循环最长被按住多久」，两次读数）：
+
+| | 事件循环最长的阻塞时长 | 搬运总耗时 |
+|---|---|---|
+| v0.3.x（同步搬运） | **988.8 / 1200.1 ms**（几乎是整段搬运全程按住） | 989 / 1200 ms |
+| v0.4.0（异步分批） | **18.7 / 16.1 ms** | 807 / 1095 ms |
+
+结论：搬运期间事件循环还在转（心跳回合约 160~200 次），吞吐没有变差。
+
+---
+
 ## 二、前置条件
 
 - DSH 主包 `>= 0.2.0-rc.2 < 0.3.0`（版本区间与兼容性细节见第五节）
@@ -358,6 +418,11 @@ server.register(route);
 7. **自动归档只处理「目录里放着数据文件的会话」**：不负责判断会话是否重要，只按
    「未活跃时长 + 回合闭合 + 非空壳」三条机械判据筛选，请先长期用试跑模式观察候选名单。
 8. **未做 i18n 全语种覆盖**：内置 `zh` / `en`，其余语言回退 `en`。
+9. **搬运是分批异步的**：为了让事件循环不被占死，搬运会在批之间让出。所以进程若恰好在搬运中间被杀，
+   归档根下会留下一个"半完成"的目标目录 —— 这不是损坏：下一轮会接着补完（`pendingBatch` 还在），
+   你也可以直接删掉那个批次目录重来。
+10. **冲突要人看**：同名会话在目标批次里已存在、但字节对不上时，插件**不会覆盖也不会删除源**，
+   只在结果里报 `conflicts` 并把 `pendingBatch` 留着 —— 需要你自己判断哪一份是该留的。
 
 ---
 
@@ -376,6 +441,10 @@ dsh-butler-archive/
 ├─ scripts/
 │  ├─ test-e2e.mjs             端到端测试（干净临时路径 + 独立配置 + 真实 HTTP，跑通全流程）
 │  ├─ test-host.mjs            测试宿主：把 host 半挂在最小 webServer 上
+│  ├─ test-archive-concurrency.mjs  夹具：并发两次只跑一次（单飞锁）
+│  ├─ test-archive-resume.mjs       夹具：半完成态只补缺的（幂等键 + 搬运中标记）
+│  ├─ test-archive-duplicate.mjs    夹具：重复副本不重搬 / 字节不一致报冲突不覆盖
+│  ├─ _fixture-support.mjs     上面三条夹具共用的小工具（临时 home + 三件套 env 隔离 + 假会话）
 │  ├─ verify-source.mjs        静态验证（语法 / 配置行为 / 硬编码与隐私扫描）
 │  ├─ verify-publish.mjs       发布后复核（两端 refs 对齐 + 内容级 API 直读 + 匿名可见 + 敏感复扫）
 │  ├─ push-publish.mjs         幂等推送器（自检 → 建仓 → 临时带 token URL 推送 → 回读校验）
@@ -395,6 +464,12 @@ node scripts/verify-source.mjs .
 # 2) 端到端：临时目录里造一套假 DSH home（sessions / storages / 归档目录 + 多帧 zstd 日志），
 #    用一份独立配置起真实 HTTP，跑 list / detail / restore / delete / auto / 安全边界
 node scripts/test-e2e.mjs          # --keep 保留临时目录便于排查
+
+# 2b) 自动归档的三条专项夹具（各自独立造现场，跑完自己清理临时目录）
+node scripts/test-archive-concurrency.mjs   # 并发触发两次 ⇒ 第二次返回「正在跑」、磁盘上只有一份
+node scripts/test-archive-resume.mjs        # 半完成态 ⇒ 再跑只补缺的、不重搬（附 mtime 未变证据）
+node scripts/test-archive-duplicate.mjs     # 同名副本 ⇒ 字节一致跳过 / 不一致报冲突且不覆盖
+#    变异证红：把 lib 复制一份、拆掉某处防线，再用 ARCHIVE_TEST_LIB=<那份 index.js> 跑对应夹具
 
 # 3) 在真实 DSH 上验证（装到测试实例，别拿正在干活的生产实例试）
 #    启动 DSH 后先 curl 一下 list 路由，再硬刷新 GUI 看分栏
