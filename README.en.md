@@ -2,6 +2,23 @@
 
 [中文](README.md) · English
 
+> ### What this is
+> **A DSH plugin**: archive idle sessions out of the sidebar, and pull them back when you need them.
+>
+> ### What it solves
+> Sessions pile up until the sidebar is pure noise — but deleting them feels unsafe, because some hold reasoning you will never write twice. This adds the missing middle state: **archive** (out of the main list, state and history fully kept), browse, restore, and an explicit real delete.
+>
+> ### Run it in one command
+> ```powershell
+> dsh plugin --profile web add @kira905/dsh-butler-archive
+> ```
+> After install the sidebar gets an "archive" entry; no config file to edit.
+>
+> ### What it looks like
+> A row of sidebar buttons plus an archive page (grouped by batch, restore one or a whole batch). ⚠️ **No screenshots in this repo** — if you want to see the UI first, install it into a test profile and click through it.
+
+---
+
 > **Three different names (as of 2026-10-19): the repository, the npm package and the runtime id.**
 > This repository was renamed from `dsh-archive-sessions` to **`dsh-butler-archive`** (older URLs on
 > both hosts redirect automatically); the **npm package is `@kira905/dsh-butler-archive`** as of this
