@@ -84,6 +84,67 @@ Get-Content <数据根>/profiles/<profile>/package.json | Select-String "@kira90
 | 恢复 | **两段式**：复制 → 逐文件字节校验 → 才删除归档源；目标已存在同名会话时拒绝（绝不覆盖） |
 | 删除 | 物理删除归档会话目录（客户端有二次确认弹窗），同时清理批次清单条目 |
 | 自动归档 | 可选定时任务：把「超过 N 小时未活跃 + 回合已闭合 + 非空壳」的会话自动搬进归档根。**默认关闭，且默认只试跑不搬** |
+| 健康自检 CLI | `dsh-archive-health`：只读体检（六项 + 退码），可 `--json`、可 `--self-test`；见下面「归档健康自检」一节 |
+
+---
+
+## 归档健康自检（CLI · v0.5.0 起）
+
+插件是「动手」的那一半；这条 CLI 是「只读体检」的那一半 —— 一条命令回答
+**「现在的归档状态还健康吗」**，不用自己去翻几份 JSON。
+
+```bash
+dsh-archive-health                       # 人话输出（六项检查 + 结论 + 退码）
+dsh-archive-health --json                # 结构化（stdout 只出 JSON，便于喂给别的脚本）
+dsh-archive-health --self-test           # 夹具自测（30 项；在系统临时目录造现场，跑完删掉）
+dsh-archive-health --strict              # ghost 按「必须 0」判（默认是分档：真 ghost 红 / 双份残留黄）
+dsh-archive-health --home <目录>          # 换 DSH 数据根（默认 DSH_HOME > ~/.dsh）
+dsh-archive-health --expect-json <文件>   # 带期望值做「配置对齐」（形状见下）
+dsh-archive-health --plugin-src <文件> --plugin-dep <文件>   # 查「源 ↔ 部署副本」sha256 是否一致
+```
+
+**退码**：`0` = 六项全 ✅；`3` = 有 ⚠️/🔴；`2` = 用法错；`1` = 自测未全过。
+
+### 六项检查
+
+| # | 检查 | 看什么 |
+|---|---|---|
+| 1 | 归档名单与 ghost | 被标记归档的会话里，有没有「文件已经搬进归档树、名单里没有、但界面还看得见」的（真 ghost）；顺带数「双份残留」（归档树与 `sessions/` 都有） |
+| 2 | 自动档配置对齐 | 与你**自己给的期望值**逐项比对（`--expect-json`）；**不给期望 ⇒ 只报现值、不判红** |
+| 3 | 上一轮自动档行为 | 上一轮读数里，`humanOnlyHandoff`（未交接不自动收走）与去重闸是不是真的在生效 |
+| 4 | 未分组会话 | 不在任何工作区里的会话；按会话日志**首帧**排除 subagent，另给「孤儿卡会话」与「重启后会不会归组」两个投影 |
+| 5 | 执行者台账健康 | `archive-session-ops.jsonl` 的行数 / 坏行 / 末条 |
+| 6 | 源 ↔ 部署副本 | 两边 sha256 是否一致（**默认不查**：外部安装没有源树 ⇒ N/A；要查得成对给两个路径） |
+
+> 🔴 **只读**：只读文件 + 只读查询（`session.list` / 读自动档配置），零写盘、零写 RPC、
+> 不重启、不归档/不删/不恢复。发现问题只报告、**绝不修**。
+> 联网两项拿不到只降级成 ⚠️「判不了」，**绝不猜**。
+
+### 期望值文件（`--expect-json`）
+
+```json
+{
+  "config": [
+    { "key": "enabled", "want": true, "severity": "bad" },
+    { "key": "humanOnlyHandoff", "want": true, "severity": "bad" },
+    { "key": "hours", "want": 48, "severity": "warn" }
+  ],
+  "allow": {
+    "require": ["<你允许自动归档的目录>"],
+    "forbid": ["<绝对不该被收走的目录>"]
+  }
+}
+```
+
+`config[]` 比单个配置键（`severity` 缺省 `warn`）；`allow.require/forbid` 比自动归档的目录白名单
+（`require` 缺一条 ⚠️、`forbid` 出现一条 🔴、清单外的目录 ⚠️）。示例见
+[`examples/archive-health.expect.example.json`](./examples/archive-health.expect.example.json)。
+
+### 联网项需要什么
+
+`session.list` 走宿主的 `/api` 通道，需要会话 cookie。这条 CLI **不读任何凭据文件**：
+有 base64 的签名密钥就放进环境变量 `DSH_RPC_COOKIE_SECRET`，它自己签 cookie；没有就走老形态/降级。
+另外 `--base-url`（缺省 `DSH_WEB_URL` > `http://127.0.0.1:3080`）指向那个实例。
 
 ---
 
@@ -453,8 +514,13 @@ dsh-butler-archive/
 │  ├─ index.js                 host 半：路由 + 扫描/预览/恢复/删除/自动归档
 │  ├─ client.js                client 半：设置页分栏 UI
 │  └─ config.js                配置层（默认值 / 文件 / 环境变量 / 校验 / 文案）
+├─ bin/
+│  └─ session-archive-health.mjs  健康自检 CLI（只读；`dsh-archive-health` 命令入口）
+├─ lib/host-rpc.mjs         极简 Host RPC 客户端（自签 cookie；只读了 `session.list`）
+├─ lib/zstd-frames.mjs      zstd 多帧边界扫描（严格结构解析；只用于读会话日志首帧）
 ├─ examples/
-│  └─ archive-sessions.config.example.json   配置示例（含全部默认值）
+│  ├─ archive-sessions.config.example.json   配置示例（含全部默认值）
+│  └─ archive-health.expect.example.json     健康自检的期望值示例（`--expect-json`）
 ├─ cordis.patch.yml            bundle patch（`dsh.bundle` 指向它；方式 0 自动挂载）
 ├─ cordis.patch.yml.example    手工注册 / 全部配置键参考（旧版装法用）
 ├─ scripts/
@@ -483,6 +549,9 @@ node scripts/verify-source.mjs .
 # 2) 端到端：临时目录里造一套假 DSH home（sessions / storages / 归档目录 + 多帧 zstd 日志），
 #    用一份独立配置起真实 HTTP，跑 list / detail / restore / delete / auto / 安全边界
 node scripts/test-e2e.mjs          # --keep 保留临时目录便于排查
+
+# 2a) 健康自检 CLI 的夹具（30 项；系统临时目录造现场，跑完自己清理）
+node bin/session-archive-health.mjs --self-test
 
 # 2b) 自动归档的三条专项夹具（各自独立造现场，跑完自己清理临时目录）
 node scripts/test-archive-concurrency.mjs   # 并发触发两次 ⇒ 第二次返回「正在跑」、磁盘上只有一份

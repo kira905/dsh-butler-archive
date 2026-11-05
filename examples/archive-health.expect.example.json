@@ -1,0 +1,24 @@
+{
+  "_comment": [
+    "dsh-archive-health 的期望值文件示例（--expect-json <本文件>）：**预期值由你自己定**，工具不替你发明。",
+    "不给这个文件时，检查② 只报当前配置、不判红/黄。",
+    "config[]：逐个配置键比 —— want 与现值比较（布尔按 === ，数字按 Number 相等）；severity 缺省 warn，可选 ok/warn/bad。",
+    "allow：自动归档的目录白名单（autoArchiveCwdAllow）—— require 缺一条 = ⚠️，forbid 出现一条 = 🔴，清单外的目录 = ⚠️。",
+    "目录按「归一化后的小写、反斜杠」比较（末尾分隔符会被去掉）。"
+  ],
+  "config": [
+    { "key": "enabled", "want": true, "severity": "bad" },
+    { "key": "dryRun", "want": false, "severity": "warn" },
+    { "key": "hours", "want": 48, "severity": "warn" },
+    { "key": "humanOnlyHandoff", "want": true, "severity": "bad" },
+    { "key": "moveFiles", "want": false, "severity": "bad" }
+  ],
+  "allow": {
+    "require": [
+      "<你允许自动归档的工作区目录>"
+    ],
+    "forbid": [
+      "<绝对不该被自动收走的目录>"
+    ]
+  }
+}

@@ -4,6 +4,32 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.5.0] - 2026-11-06
+
+### Added
+
+- **新增 CLI：`dsh-archive-health`（本仓第一个命令入口）** —— 归档状态的**只读**健康自检：
+  一条命令给六项检查 + 结论 + 退码（`0` 全绿 / `3` 有 ⚠️·🔴 / `2` 用法错 / `1` 自测未全过）。
+  六项 = ①归档名单与 ghost ②自动档配置对齐（**要你给期望值**，`--expect-json`；不给只报现值）
+  ③上一轮自动档行为 ④未分组会话（含「孤儿卡会话」「重启后归组预测」两个投影）
+  ⑤执行者台账 ⑥源 ↔ 部署副本 sha256（**默认关**：外部安装没有源树 ⇒ N/A，成对给
+  `--plugin-src`/`--plugin-dep` 才查）。
+  严格只读：零写盘、零写 RPC、不重启、不归档/不删/不恢复；联网两项拿不到只降级成 ⚠️「判不了」，不猜。
+  `--self-test` 带 30 项夹具（在系统临时目录造现场，跑完自己删）。
+  溯源 sha16：体检器开发源 `22b45e7e04cacd72`（62,673 B，`--self-test` 30/30；进仓后 66,529 B
+  = 加了参数化与可选闸）· 拆帧件上游 `370709f8227b99d9`（进仓 `ebba262cb629d457`）·
+  RPC 件上游 `5956ba7d5aa16ece`（进仓 `eef03d7e9a963706`）。
+- 新增 `lib/zstd-frames.mjs`（zstd 多帧边界扫描）与 `lib/host-rpc.mjs`（极简 Host RPC 客户端：
+  显式/env 密钥、自签 cookie、新老两种调用形态；无密钥时降级而不是假装成功）。
+- 新增示例 `examples/archive-health.expect.example.json`（期望值文件形状）。
+- `package.json` 补 `bin`（`dsh-archive-health`），`files` 增加 `bin/` —— **`npm i` 之后命令才上 PATH**。
+
+### Notes
+
+- 本版本**没有改插件运行时行为**（`lib/index.js` / `lib/client.js` / `lib/config.js` 未动）：
+  0.5.0 只是多了一个只读 CLI 与它依赖的两件小工具。
+- `engines.node` 仍是 `>=20`（CLI 用到 `node:zlib` 的 zstd 解压与 `AbortSignal.timeout`）。
+
 ## [0.4.0] - 2026-10-30
 
 ### Fixed

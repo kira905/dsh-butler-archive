@@ -192,6 +192,27 @@ Highlighted keys: `language`, `ui` / `uiByLanguage` (override every UI string),
 > (`enabled` / `dryRun` / `hours` / `intervalMs` / `minSizeMb` / `maxPerRun`), which live in the state
 > file and take effect immediately via the panel or `POST {prefix}/auto`.
 
+### Health check CLI (v0.5.0+)
+
+The plugin is the half that acts; `dsh-archive-health` is the read-only half. One command answers
+"is the archive state healthy right now" with six checks, a human-readable (or `--json`) report and
+a meaningful exit code (`0` all green, `3` some ⚠️/🔴, `2` usage error, `1` self-test failed).
+
+```bash
+dsh-archive-health --self-test      # 30 fixture checks, self-cleaning, no side effects
+dsh-archive-health --json           # structured output for scripting
+dsh-archive-health --strict         # treat any ghost as red (default splits real ghosts vs duplicates)
+```
+
+Checks: (1) archived-list vs ghost sessions, (2) auto-archive config against **your** expectations
+(`--expect-json`; without it the tool only reports current values), (3) last auto-archive run,
+(4) ungrouped sessions (sub-agents excluded via the log's first frame), (5) the ops ledger,
+(6) source vs deployed copy sha256 (**off by default**: N/A outside a source checkout).
+
+It is strictly read-only. The two networked checks degrade to ⚠️ "cannot tell" when the host is
+unreachable — it never guesses. Cookie: put the base64 signing key in `DSH_RPC_COOKIE_SECRET`
+(the CLI reads no credential file itself).
+
 ## Compatibility
 
 `package.json` declares `"@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0"` (optional peer).
