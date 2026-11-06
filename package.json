@@ -1,6 +1,6 @@
 {
   "name": "@kira905/dsh-butler-archive",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "DSH web plugin: browse, preview, restore and delete sessions that were physically moved out of the sessions directory (archived sessions). Zero runtime dependencies.",
   "keywords": [
     "dsh",
@@ -44,17 +44,9 @@
       "platform": "web"
     }
   },
-  "peerDependencies": {
-    "@deepseek-ai/dsh": ">=0.2.0-rc.2 <0.3.0"
-  },
-  "peerDependenciesMeta": {
-    "@deepseek-ai/dsh": {
-      "optional": true
-    }
-  },
   "engines": {
     "node": ">=20",
-    "dsh": ">=0.2.0-rc.2 <0.3.0"
+    "dsh": ">=0.2.0"
   },
   "license": "AGPL-3.0-only",
   "publishConfig": {

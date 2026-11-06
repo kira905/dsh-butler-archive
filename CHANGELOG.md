@@ -4,6 +4,19 @@
 > 版本号规则见 [`docs/RELEASING.md`](docs/RELEASING.md) §1；当前处于 **0.x**（MINOR 位可承载破坏性变更，但必须显式标注 `Breaking`）。
 > 倒序排列：最新在最上。
 
+## [0.5.1] - 2026-11-06
+
+### 变更（使用者可见）
+
+- **不再用 `peerDependencies` 声明宿主版本**，也不再带 `peerDependenciesMeta`。
+  原因见 README「支持哪个版本的 DSH」：那句区间在每一个真实宿主上都会误报，纯噪音。
+- 支持范围改为写在 README（DSH **0.2.x**），靠**运行时特性探测 + 降级**而不是靠包管理器卡版本。
+- `engines.dsh` 同步放宽为 `>=0.2.0`。
+
+### 影响面
+
+装的时候不再出现 `missing peer @deepseek-ai/dsh` 这类警告；API 与行为无变化，**无需迁移动作**。
+
 ## [0.5.0] - 2026-11-06
 
 ### Added
